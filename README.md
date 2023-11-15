@@ -8,7 +8,7 @@
 
 ## 安装
 
-1. [下载>>](https://github.com/KURANADO2/emoji-alfredworkflow/releases)
+1. [下载>>](https://github.com/homfen/emoji-alfredworkflow/raw/master/Emoji.alfredworkflow)
 2. 下载 Emoji.alfredworkflow 到本地后，双击即可安装到 Alfred 中
 
 ## 使用方法
