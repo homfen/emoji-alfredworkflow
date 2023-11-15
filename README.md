@@ -30,11 +30,6 @@
     - `好的 3`，则将 `好的` 作为`关键词`，查询第 3 页结果
 - 选择表情包时，可按 Shift 放大预览图片
 
-## 如何更新
-
-- 使用命令触发更新：调起 Alfred 后，输入 `update` 关键字即可检查更新，如果有新版本，将自动下载并安装到 Alfred 中 
-![如何更新](./images/update.png)
-- 手动更新：访问 [GitHub Releases 下载页面](https://github.com/KURANADO2/emoji-alfredworkflow/releases)，手动下载当前最新版本，双击将安装更新到 Alfred 中
 
 ## 实现原理
 
