@@ -867,8 +867,8 @@ class Settings(dict):
         data.update(self)
 
         with LockFile(self._filepath, 0.5):
-            with atomic_writer(self._filepath, 'wb') as fp:
-                json.dump(data, fp, sort_keys=True, indent=2, encoding='utf-8')
+            with atomic_writer(self._filepath, 'w') as fp:
+                fp.write(json.dumps(data))
 
     # dict methods
     def __setitem__(self, key, value):
@@ -2263,7 +2263,7 @@ class Workflow(object):
 
             version = self.version
 
-        if isinstance(version, basestring):
+        if isinstance(version, str):
             from update import Version
             version = Version(version)
 

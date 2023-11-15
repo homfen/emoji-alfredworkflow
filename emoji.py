@@ -51,12 +51,13 @@ def list_emoji(query=None, page=1):
         src = d['data-src']
         r = re.compile('(\d+)\.\w+$')
         match = r.search(src)
+        title = d['alt']
         if match:
             image_name = match.group(1)
         else:
-            image_name = d['alt']
+            image_name = title
         key_name = cache_path + image_name
-        e = {'url': src, 'path': key_name}
+        e = {'url': src, 'path': key_name, 'title': title}
         emojis.append(e)
 
         if os.path.exists(key_name):
@@ -116,7 +117,11 @@ def main(wf):
 
     # 添加 item 到 workflow 列表
     for emoji in emojis:
-        wf.add_item(title=emoji['title'],
+        if 'title' in emoji:
+            title = emoji['title']
+        else:
+            title = emoji['path']
+        wf.add_item(title=title,
                     subtitle=emoji['path'],
                     arg=emoji['path'],
                     valid=True,
