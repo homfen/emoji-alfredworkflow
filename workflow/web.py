@@ -6,7 +6,6 @@
 #
 # Created on 2014-02-15
 #
-
 """Lightweight HTTP library with a requests-like interface."""
 
 from __future__ import absolute_import, print_function
@@ -21,8 +20,8 @@ import socket
 import string
 import unicodedata
 import urllib
-import urllib2
-import urlparse
+import urllib.request as urllib2
+import urllib.parse as urlparse
 import zlib
 
 __version__ = open(os.path.join(os.path.dirname(__file__), 'version')).read()
@@ -92,12 +91,16 @@ def str_dict(dic):
     else:
         dic2 = {}
     for k, v in dic.items():
-        if isinstance(k, unicode):
+        if isinstance(k, str):
             k = k.encode('utf-8')
-        if isinstance(v, unicode):
+        if isinstance(v, str):
             v = v.encode('utf-8')
         dic2[k] = v
     return dic2
+
+
+def bytes2str(bs):
+    return bs.decode('utf-8')
 
 
 class NoRedirectHandler(urllib2.HTTPRedirectHandler):
@@ -156,29 +159,29 @@ class CaseInsensitiveDictionary(dict):
 
     def items(self):
         """Return ``(key, value)`` pairs."""
-        return [(v['key'], v['val']) for v in dict.itervalues(self)]
+        return [(v['key'], v['val']) for v in dict.values(self)]
 
     def keys(self):
         """Return original keys."""
-        return [v['key'] for v in dict.itervalues(self)]
+        return [v['key'] for v in dict.values(self)]
 
     def values(self):
         """Return all values."""
-        return [v['val'] for v in dict.itervalues(self)]
+        return [v['val'] for v in dict.values(self)]
 
     def iteritems(self):
         """Iterate over ``(key, value)`` pairs."""
-        for v in dict.itervalues(self):
+        for v in dict.values(self):
             yield v['key'], v['val']
 
     def iterkeys(self):
         """Iterate over original keys."""
-        for v in dict.itervalues(self):
+        for v in dict.values(self):
             yield v['key']
 
-    def itervalues(self):
+    def values(self):
         """Interate over values."""
-        for v in dict.itervalues(self):
+        for v in dict.values(self):
             yield v['val']
 
 
@@ -343,8 +346,8 @@ class Response(object):
 
         """
         if self.encoding:
-            return unicodedata.normalize('NFC', unicode(self.content,
-                                                        self.encoding))
+            return unicodedata.normalize('NFC', str(self.content,
+                                                    self.encoding))
         return self.content
 
     def iter_content(self, chunk_size=4096, decode_unicode=False):
@@ -479,8 +482,16 @@ class Response(object):
         return encoding
 
 
-def request(method, url, params=None, data=None, headers=None, cookies=None,
-            files=None, auth=None, timeout=60, allow_redirects=False,
+def request(method,
+            url,
+            params=None,
+            data=None,
+            headers=None,
+            cookies=None,
+            files=None,
+            auth=None,
+            timeout=60,
+            allow_redirects=False,
             stream=False):
     """Initiate an HTTP(S) request. Returns :class:`Response` object.
 
@@ -553,8 +564,9 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
         headers['user-agent'] = USER_AGENT
 
     # Accept gzip-encoded content
-    encodings = [s.strip() for s in
-                 headers.get('accept-encoding', '').split(',')]
+    encodings = [
+        s.strip() for s in headers.get('accept-encoding', '').split(',')
+    ]
     if 'gzip' not in encodings:
         encodings.append('gzip')
 
@@ -566,12 +578,12 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
         new_headers, data = encode_multipart_formdata(data, files)
         headers.update(new_headers)
     elif data and isinstance(data, dict):
-        data = urllib.urlencode(str_dict(data))
+        data = urlparse.urlencode(str_dict(data))
 
     # Make sure everything is encoded text
     headers = str_dict(headers)
 
-    if isinstance(url, unicode):
+    if isinstance(url, str):
         url = url.encode('utf-8')
 
     if params:  # GET args (POST args are handled in encode_multipart_formdata)
@@ -584,39 +596,75 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
             url_params.update(params)
             params = url_params
 
-        query = urllib.urlencode(str_dict(params), doseq=True)
-        url = urlparse.urlunsplit((scheme, netloc, path, query, fragment))
+        query = urlparse.urlencode(str_dict(params), doseq=True)
+        url = urlparse.urlunsplit(
+            (bytes2str(scheme), bytes2str(netloc), bytes2str(path), query,
+             bytes2str(fragment)))
 
     req = Request(url, data, headers, method=method)
     return Response(req, stream)
 
 
-def get(url, params=None, headers=None, cookies=None, auth=None,
-        timeout=60, allow_redirects=True, stream=False):
+def get(url,
+        params=None,
+        headers=None,
+        cookies=None,
+        auth=None,
+        timeout=60,
+        allow_redirects=True,
+        stream=False):
     """Initiate a GET request. Arguments as for :func:`request`.
 
     :returns: :class:`Response` instance
 
     """
-    return request('GET', url, params, headers=headers, cookies=cookies,
-                   auth=auth, timeout=timeout, allow_redirects=allow_redirects,
+    return request('GET',
+                   url,
+                   params,
+                   headers=headers,
+                   cookies=cookies,
+                   auth=auth,
+                   timeout=timeout,
+                   allow_redirects=allow_redirects,
                    stream=stream)
 
 
-def delete(url, params=None, data=None, headers=None, cookies=None, auth=None,
-           timeout=60, allow_redirects=True, stream=False):
+def delete(url,
+           params=None,
+           data=None,
+           headers=None,
+           cookies=None,
+           auth=None,
+           timeout=60,
+           allow_redirects=True,
+           stream=False):
     """Initiate a DELETE request. Arguments as for :func:`request`.
 
     :returns: :class:`Response` instance
 
     """
-    return request('DELETE', url, params, data, headers=headers,
-                   cookies=cookies, auth=auth, timeout=timeout,
-                   allow_redirects=allow_redirects, stream=stream)
+    return request('DELETE',
+                   url,
+                   params,
+                   data,
+                   headers=headers,
+                   cookies=cookies,
+                   auth=auth,
+                   timeout=timeout,
+                   allow_redirects=allow_redirects,
+                   stream=stream)
 
 
-def post(url, params=None, data=None, headers=None, cookies=None, files=None,
-         auth=None, timeout=60, allow_redirects=False, stream=False):
+def post(url,
+         params=None,
+         data=None,
+         headers=None,
+         cookies=None,
+         files=None,
+         auth=None,
+         timeout=60,
+         allow_redirects=False,
+         stream=False):
     """Initiate a POST request. Arguments as for :func:`request`.
 
     :returns: :class:`Response` instance
@@ -626,8 +674,16 @@ def post(url, params=None, data=None, headers=None, cookies=None, files=None,
                    timeout, allow_redirects, stream)
 
 
-def put(url, params=None, data=None, headers=None, cookies=None, files=None,
-        auth=None, timeout=60, allow_redirects=False, stream=False):
+def put(url,
+        params=None,
+        data=None,
+        headers=None,
+        cookies=None,
+        files=None,
+        auth=None,
+        timeout=60,
+        allow_redirects=False,
+        stream=False):
     """Initiate a PUT request. Arguments as for :func:`request`.
 
     :returns: :class:`Response` instance
@@ -662,6 +718,7 @@ def encode_multipart_formdata(fields, files):
       will be used.
 
     """
+
     def get_content_type(filename):
         """Return or guess mimetype of ``filename``.
 
@@ -673,16 +730,16 @@ def encode_multipart_formdata(fields, files):
         """
         return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
 
-    boundary = '-----' + ''.join(random.choice(BOUNDARY_CHARS)
-                                 for i in range(30))
+    boundary = '-----' + ''.join(
+        random.choice(BOUNDARY_CHARS) for i in range(30))
     CRLF = '\r\n'
     output = []
 
     # Normal form fields
     for (name, value) in fields.items():
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             name = name.encode('utf-8')
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode('utf-8')
         output.append('--' + boundary)
         output.append('Content-Disposition: form-data; name="%s"' % name)
@@ -697,11 +754,11 @@ def encode_multipart_formdata(fields, files):
             mimetype = d[u'mimetype']
         else:
             mimetype = get_content_type(filename)
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             name = name.encode('utf-8')
-        if isinstance(filename, unicode):
+        if isinstance(filename, str):
             filename = filename.encode('utf-8')
-        if isinstance(mimetype, unicode):
+        if isinstance(mimetype, str):
             mimetype = mimetype.encode('utf-8')
         output.append('--' + boundary)
         output.append('Content-Disposition: form-data; '

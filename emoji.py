@@ -4,13 +4,15 @@
 import sys
 from workflow import Workflow3, web
 from multiprocessing.pool import ThreadPool
-import urllib2
+import urllib.request
+import requests
 import os
 import re
+from bs4 import BeautifulSoup
 
 ICON_DEFAULT = 'icon.png'
 
-headers = {"Referer": "http://kuranado.com"}
+headers = {"Referer": "https://www.doutub.com"}
 user_home_dir = os.path.expanduser('~') + "/.emoji"
 cache_path = os.getenv('cache_path', user_home_dir)
 if cache_path == "":
@@ -23,36 +25,44 @@ if cache_path[len(cache_path) - 1] != '/':
 
 
 def list_emoji(query=None, page=1):
-    url = "http://api.kuranado.com/emoji/search"
-    # url = "http://127.0.0.1:20001/emoji/search"
-    params = dict(keyword=query, page=page, size=9)
+    url = "https://www.doutub.com/search/{}/{}".format(query, page)
 
-    r = web.get(url, params)
+    r = requests.get(url, headers=headers)
 
     # throw an error if request failed, Workflow will catch this and show it to the user
     r.raise_for_status()
 
     emojis = []
-    data = r.json()
+    data = r.text
+
+    soup = BeautifulSoup(data)
+    imgs = soup.css.select('img[data-src]')
 
     if not os.path.exists(cache_path):
         os.makedirs(cache_path)
 
-    if len(data['data']) == 0:
+    count = len(imgs)
+    if count == 0:
         return emojis
-    pool = ThreadPool(processes=len(data['data']))
+    pool = ThreadPool(processes=count)
 
-    for d in data['data']:
+    for d in imgs:
 
-        image_name = d['url'][d['url'].index('emoji') + 6:]
+        src = d['data-src']
+        r = re.compile('(\d+)\.\w+$')
+        match = r.search(src)
+        if match:
+            image_name = match.group(1)
+        else:
+            image_name = d['alt']
         key_name = cache_path + image_name
-        d['path'] = key_name
-        emojis.append(d)
+        e = {'url': src, 'path': key_name}
+        emojis.append(e)
 
         if os.path.exists(key_name):
             continue
 
-        pool.apply_async(func=download, args=(d['url'], key_name))
+        pool.apply_async(func=download, args=(src, key_name))
     pool.close()
     pool.join()
     return emojis
@@ -60,11 +70,10 @@ def list_emoji(query=None, page=1):
 
 def download(url, out_dir):
 
-    request = urllib2.Request(url, headers=headers)
-    response = urllib2.urlopen(request)
-    if response.getcode() == 200:
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
         with open(out_dir, "wb") as f:
-            f.write(response.read())
+            f.write(response.content)
     else:
         logger.debug("图片下载失败")
 

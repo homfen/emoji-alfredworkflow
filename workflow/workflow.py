@@ -6,7 +6,6 @@
 #
 # Created on 2014-02-15
 #
-
 """The :class:`Workflow` object is the main interface to this library.
 
 :class:`Workflow` is targeted at Alfred 2. Use
@@ -22,7 +21,7 @@ up your Python script to best utilise the :class:`Workflow` object.
 from __future__ import print_function, unicode_literals
 
 import binascii
-import cPickle
+import _pickle as cPickle
 from copy import deepcopy
 import json
 import logging
@@ -44,8 +43,8 @@ except ImportError:  # pragma: no cover
     import xml.etree.ElementTree as ET
 
 # imported to maintain API
-from util import AcquisitionError  # noqa: F401
-from util import (
+from .util import AcquisitionError  # noqa: F401
+from .util import (
     atomic_writer,
     LockFile,
     uninterruptible,
@@ -403,7 +402,6 @@ DUMB_PUNCTUATION = {
     '—': '-'
 }
 
-
 ####################################################################
 # Used by `Workflow.filter`
 ####################################################################
@@ -436,14 +434,12 @@ MATCH_ALLCHARS = 64
 #: Combination of all other ``MATCH_*`` constants
 MATCH_ALL = 127
 
-
 ####################################################################
 # Used by `Workflow.check_update`
 ####################################################################
 
 # Number of days to wait between checking for updates to the workflow
 DEFAULT_UPDATE_FREQUENCY = 1
-
 
 ####################################################################
 # Keychain access errors
@@ -483,6 +479,7 @@ class PasswordExists(KeychainError):
 # Helper functions
 ####################################################################
 
+
 def isascii(text):
     """Test if ``text`` contains only ASCII characters.
 
@@ -502,6 +499,7 @@ def isascii(text):
 ####################################################################
 # Implementation classes
 ####################################################################
+
 
 class SerializerManager(object):
     """Contains registered serializers.
@@ -568,8 +566,8 @@ class SerializerManager(object):
 
         """
         if name not in self._serializers:
-            raise ValueError('No such serializer registered : {0}'.format(
-                             name))
+            raise ValueError(
+                'No such serializer registered : {0}'.format(name))
 
         serializer = self._serializers[name]
         del self._serializers[name]
@@ -717,10 +715,20 @@ class Item(object):
 
     """
 
-    def __init__(self, title, subtitle='', modifier_subtitles=None,
-                 arg=None, autocomplete=None, valid=False, uid=None,
-                 icon=None, icontype=None, type=None, largetext=None,
-                 copytext=None, quicklookurl=None):
+    def __init__(self,
+                 title,
+                 subtitle='',
+                 modifier_subtitles=None,
+                 arg=None,
+                 autocomplete=None,
+                 valid=False,
+                 uid=None,
+                 icon=None,
+                 icontype=None,
+                 type=None,
+                 largetext=None,
+                 copytext=None,
+                 quicklookurl=None):
         """Same arguments as :meth:`Workflow.add_item`."""
         self.title = title
         self.subtitle = subtitle
@@ -769,8 +777,9 @@ class Item(object):
         # Add modifier subtitles
         for mod in ('cmd', 'ctrl', 'alt', 'shift', 'fn'):
             if mod in self.modifier_subtitles:
-                ET.SubElement(root, 'subtitle',
-                              {'mod': mod}).text = self.modifier_subtitles[mod]
+                ET.SubElement(root, 'subtitle', {
+                    'mod': mod
+                }).text = self.modifier_subtitles[mod]
 
         # Add arg as element instead of attribute on <item>, as it's more
         # flexible (newlines aren't allowed in attributes)
@@ -786,12 +795,12 @@ class Item(object):
             ET.SubElement(root, 'icon', attr).text = self.icon
 
         if self.largetext:
-            ET.SubElement(root, 'text',
-                          {'type': 'largetype'}).text = self.largetext
+            ET.SubElement(root, 'text', {
+                'type': 'largetype'
+            }).text = self.largetext
 
         if self.copytext:
-            ET.SubElement(root, 'text',
-                          {'type': 'copy'}).text = self.copytext
+            ET.SubElement(root, 'text', {'type': 'copy'}).text = self.copytext
 
         if self.quicklookurl:
             ET.SubElement(root, 'quicklookurl').text = self.quicklookurl
@@ -859,8 +868,7 @@ class Settings(dict):
 
         with LockFile(self._filepath, 0.5):
             with atomic_writer(self._filepath, 'wb') as fp:
-                json.dump(data, fp, sort_keys=True, indent=2,
-                          encoding='utf-8')
+                json.dump(data, fp, sort_keys=True, indent=2, encoding='utf-8')
 
     # dict methods
     def __setitem__(self, key, value):
@@ -936,9 +944,13 @@ class Workflow(object):
     # won't want to change this
     item_class = Item
 
-    def __init__(self, default_settings=None, update_settings=None,
-                 input_encoding='utf-8', normalization='NFC',
-                 capture_args=True, libraries=None,
+    def __init__(self,
+                 default_settings=None,
+                 update_settings=None,
+                 input_encoding='utf-8',
+                 normalization='NFC',
+                 capture_args=True,
+                 libraries=None,
                  help_url=None):
         """Create new :class:`Workflow` object."""
         self._default_settings = default_settings or {}
@@ -1051,21 +1063,11 @@ class Workflow(object):
 
         data = {}
 
-        for key in (
-                'debug',
-                'preferences',
-                'preferences_localhash',
-                'theme',
-                'theme_background',
-                'theme_subtext',
-                'version',
-                'version_build',
-                'workflow_bundleid',
-                'workflow_cache',
-                'workflow_data',
-                'workflow_name',
-                'workflow_uid',
-                'workflow_version'):
+        for key in ('debug', 'preferences', 'preferences_localhash', 'theme',
+                    'theme_background', 'theme_subtext', 'version',
+                    'version_build', 'workflow_bundleid', 'workflow_cache',
+                    'workflow_data', 'workflow_name', 'workflow_uid',
+                    'workflow_version'):
 
             value = os.getenv('alfred_' + key, '')
 
@@ -1100,7 +1102,7 @@ class Workflow(object):
             if self.alfred_env.get('workflow_bundleid'):
                 self._bundleid = self.alfred_env.get('workflow_bundleid')
             else:
-                self._bundleid = unicode(self.info['bundleid'], 'utf-8')
+                self._bundleid = str(self.info['bundleid'])
 
         return self._bundleid
 
@@ -1249,8 +1251,7 @@ class Workflow(object):
         return os.path.join(
             os.path.expanduser(
                 '~/Library/Caches/com.runningwithcrayons.Alfred-2/'
-                'Workflow Data/'),
-            self.bundleid)
+                'Workflow Data/'), self.bundleid)
 
     @property
     def datadir(self):
@@ -1282,8 +1283,9 @@ class Workflow(object):
     @property
     def _default_datadir(self):
         """Alfred 2's default data directory."""
-        return os.path.join(os.path.expanduser(
-            '~/Library/Application Support/Alfred 2/Workflow Data/'),
+        return os.path.join(
+            os.path.expanduser(
+                '~/Library/Application Support/Alfred 2/Workflow Data/'),
             self.bundleid)
 
     @property
@@ -1299,8 +1301,9 @@ class Workflow(object):
             # the library is in. CWD will be the workflow root if
             # a workflow is being run in Alfred
             candidates = [
-                os.path.abspath(os.getcwdu()),
-                os.path.dirname(os.path.abspath(os.path.dirname(__file__)))]
+                os.path.abspath(os.getcwd()),
+                os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+            ]
 
             # climb the directory tree until we find `info.plist`
             for dirpath in candidates:
@@ -1406,10 +1409,10 @@ class Workflow(object):
                 ' %(levelname)-8s %(message)s',
                 datefmt='%H:%M:%S')
 
-            logfile = logging.handlers.RotatingFileHandler(
-                self.logfile,
-                maxBytes=1024 * 1024,
-                backupCount=1)
+            logfile = logging.handlers.RotatingFileHandler(self.logfile,
+                                                           maxBytes=1024 *
+                                                           1024,
+                                                           backupCount=1)
             logfile.setFormatter(fmt)
             logger.addHandler(logfile)
 
@@ -1762,9 +1765,16 @@ class Workflow(object):
 
         return time.time() - os.stat(cache_path).st_mtime
 
-    def filter(self, query, items, key=lambda x: x, ascending=False,
-               include_score=False, min_score=0, max_results=0,
-               match_on=MATCH_ALL, fold_diacritics=True):
+    def filter(self,
+               query,
+               items,
+               key=lambda x: x,
+               ascending=False,
+               include_score=False,
+               min_score=0,
+               max_results=0,
+               match_on=MATCH_ALL,
+               fold_diacritics=True):
         """Fuzzy search filter. Returns list of ``items`` that match ``query``.
 
         ``query`` is case-insensitive. Any item that does not contain the
@@ -1958,9 +1968,8 @@ class Workflow(object):
 
         # split the item into "atoms", i.e. words separated by
         # spaces or other non-word characters
-        if (match_on & MATCH_ATOM or
-                match_on & MATCH_INITIALS_CONTAIN or
-                match_on & MATCH_INITIALS_STARTSWITH):
+        if (match_on & MATCH_ATOM or match_on & MATCH_INITIALS_CONTAIN
+                or match_on & MATCH_INITIALS_STARTSWITH):
             atoms = [s.lower() for s in split_on_delimiters(value)]
             # print('atoms : %s  -->  %s' % (value, atoms))
             # initials of the atoms
@@ -1979,16 +1988,15 @@ class Workflow(object):
         # atoms, e.g. ``himym`` matches "How I Met Your Mother"
         # *and* "how i met your mother" (the ``capitals`` rule only
         # matches the former)
-        if (match_on & MATCH_INITIALS_STARTSWITH and
-                initials.startswith(query)):
+        if (match_on & MATCH_INITIALS_STARTSWITH
+                and initials.startswith(query)):
             score = 100.0 - (len(initials) / len(query))
 
             return (score, MATCH_INITIALS_STARTSWITH)
 
         # `query` is a substring of initials, e.g. ``doh`` matches
         # "The Dukes of Hazzard"
-        elif (match_on & MATCH_INITIALS_CONTAIN and
-                query in initials):
+        elif (match_on & MATCH_INITIALS_CONTAIN and query in initials):
             score = 95.0 - (len(initials) / len(query))
 
             return (score, MATCH_INITIALS_CONTAIN)
@@ -2057,8 +2065,8 @@ class Workflow(object):
         # to catch any errors and display an error message in Alfred
         try:
             if self.version:
-                self.logger.debug('---------- %s (%s) ----------',
-                                  self.name, self.version)
+                self.logger.debug('---------- %s (%s) ----------', self.name,
+                                  self.version)
             else:
                 self.logger.debug('---------- %s ----------', self.name)
 
@@ -2083,7 +2091,7 @@ class Workflow(object):
 
             if not sys.stdout.isatty():  # Show error in Alfred
                 if text_errors:
-                    print(unicode(err).encode('utf-8'), end='')
+                    print(str(err).encode('utf-8'), end='')
                 else:
                     self._items = []
                     if self._name:
@@ -2093,7 +2101,7 @@ class Workflow(object):
                     else:  # pragma: no cover
                         name = os.path.dirname(__file__)
                     self.add_item("Error in workflow '%s'" % name,
-                                  unicode(err),
+                                  str(err),
                                   icon=ICON_ERROR)
                     self.send_feedback()
             return 1
@@ -2106,9 +2114,19 @@ class Workflow(object):
 
     # Alfred feedback methods ------------------------------------------
 
-    def add_item(self, title, subtitle='', modifier_subtitles=None, arg=None,
-                 autocomplete=None, valid=False, uid=None, icon=None,
-                 icontype=None, type=None, largetext=None, copytext=None,
+    def add_item(self,
+                 title,
+                 subtitle='',
+                 modifier_subtitles=None,
+                 arg=None,
+                 autocomplete=None,
+                 valid=False,
+                 uid=None,
+                 icon=None,
+                 icontype=None,
+                 type=None,
+                 largetext=None,
+                 copytext=None,
                  quicklookurl=None):
         """Add an item to be output to Alfred.
 
@@ -2366,8 +2384,7 @@ class Workflow(object):
         from background import run_in_background
 
         # update.py is adjacent to this file
-        update_script = os.path.join(os.path.dirname(__file__),
-                                     b'update.py')
+        update_script = os.path.join(os.path.dirname(__file__), b'update.py')
 
         cmd = ['/usr/bin/python', update_script, 'install', repo, version]
 
@@ -2406,8 +2423,8 @@ class Workflow(object):
             service = self.bundleid
 
         try:
-            self._call_security('add-generic-password', service, account,
-                                '-w', password)
+            self._call_security('add-generic-password', service, account, '-w',
+                                password)
             self.logger.debug('saved password : %s:%s', service, account)
 
         except PasswordExists:
@@ -2419,8 +2436,8 @@ class Workflow(object):
 
             else:
                 self.delete_password(account, service)
-                self._call_security('add-generic-password', service,
-                                    account, '-w', password)
+                self._call_security('add-generic-password', service, account,
+                                    '-w', password)
                 self.logger.debug('save_password : %s:%s', service, account)
 
     def get_password(self, account, service=None):
@@ -2441,8 +2458,8 @@ class Workflow(object):
         if not service:
             service = self.bundleid
 
-        output = self._call_security('find-generic-password', service,
-                                     account, '-g')
+        output = self._call_security('find-generic-password', service, account,
+                                     '-g')
 
         # Parsing of `security` output is adapted from python-keyring
         # by Jason R. Coombs
@@ -2456,7 +2473,7 @@ class Workflow(object):
             h = groups.get('hex')
             password = groups.get('pw')
             if h:
-                password = unicode(binascii.unhexlify(h), 'utf-8')
+                password = str(binascii.unhexlify(h), 'utf-8')
 
         self.logger.debug('got password : %s:%s', service, account)
 
@@ -2488,9 +2505,11 @@ class Workflow(object):
 
     def _register_default_magic(self):
         """Register the built-in magic arguments."""
+
         # TODO: refactor & simplify
         # Wrap callback and message with callable
         def callback(func, msg):
+
             def wrapper():
                 func()
                 return msg
@@ -2503,10 +2522,9 @@ class Workflow(object):
                                                    'Deleted workflow data')
         self.magic_arguments['delsettings'] = callback(
             self.clear_settings, 'Deleted workflow settings')
-        self.magic_arguments['reset'] = callback(self.reset,
-                                                 'Reset workflow')
-        self.magic_arguments['openlog'] = callback(self.open_log,
-                                                   'Opening workflow log file')
+        self.magic_arguments['reset'] = callback(self.reset, 'Reset workflow')
+        self.magic_arguments['openlog'] = callback(
+            self.open_log, 'Opening workflow log file')
         self.magic_arguments['opencache'] = callback(
             self.open_cachedir, 'Opening workflow cache directory')
         self.magic_arguments['opendata'] = callback(
@@ -2697,8 +2715,8 @@ class Workflow(object):
         """
         encoding = encoding or self._input_encoding
         normalization = normalization or self._normalizsation
-        if not isinstance(text, unicode):
-            text = unicode(text, encoding)
+        if not isinstance(text, str):
+            text = str(text, encoding)
         return unicodedata.normalize(normalization, text)
 
     def fold_to_ascii(self, text):
@@ -2717,8 +2735,8 @@ class Workflow(object):
         if isascii(text):
             return text
         text = ''.join([ASCII_REPLACEMENTS.get(c, c) for c in text])
-        return unicode(unicodedata.normalize('NFKD',
-                       text).encode('ascii', 'ignore'))
+        return str(
+            unicodedata.normalize('NFKD', text).encode('ascii', 'ignore'))
 
     def dumbify_punctuation(self, text):
         """Convert non-ASCII punctuation to closest ASCII equivalent.
@@ -2765,7 +2783,8 @@ class Workflow(object):
     def _load_info_plist(self):
         """Load workflow info from ``info.plist``."""
         # info.plist should be in the directory above this one
-        self._info = plistlib.readPlist(self.workflowfile('info.plist'))
+        with open(self.workflowfile('info.plist'), 'rb') as fp:
+            self._info = plistlib.loads(fp.read())
         self._info_loaded = True
 
     def _create(self, dirpath):
@@ -2806,7 +2825,8 @@ class Workflow(object):
 
         """
         cmd = ['security', action, '-s', service, '-a', account] + list(args)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+        p = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         stdout, _ = p.communicate()
         if p.returncode == 44:  # password does not exist
