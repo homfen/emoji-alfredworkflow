@@ -12,7 +12,6 @@ from bs4 import BeautifulSoup
 
 ICON_DEFAULT = 'icon.png'
 
-headers = {"Referer": "https://www.doutub.com"}
 user_home_dir = os.path.expanduser('~') + "/.emoji"
 cache_path = os.getenv('cache_path', user_home_dir)
 if cache_path == "":
@@ -24,9 +23,10 @@ if cache_path[len(cache_path) - 1] != '/':
     cache_path = cache_path + '/'
 
 
-def list_emoji(query=None, page=1):
+def list_emoji_doutub(query=None, page=1):
     url = "https://www.doutub.com/search/{}/{}".format(query, page)
 
+    headers = {"Referer": "https://www.doutub.com"}
     r = requests.get(url, headers=headers)
 
     # throw an error if request failed, Workflow will catch this and show it to the user
@@ -63,13 +63,59 @@ def list_emoji(query=None, page=1):
         if os.path.exists(key_name):
             continue
 
-        pool.apply_async(func=download, args=(src, key_name))
+        pool.apply_async(func=download, args=(src, key_name, headers))
     pool.close()
     pool.join()
     return emojis
 
 
-def download(url, out_dir):
+def list_emoji_dbbqb(query=None, page=1):
+    start = (page - 1) * 100
+    url = "https://www.dbbqb.com/api/search/json?start={}&w={}".format(
+        start, query)
+
+    headers = {
+        "Referer":
+        "https://www.dbbqb.com/api/search/json?start=0&w=%E5%9C%A8%E5%90%97",
+        "Content-Type": "application/json",
+        "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Web-Agent": "web"
+    }
+    r = requests.get(url, headers=headers)
+
+    # throw an error if request failed, Workflow will catch this and show it to the user
+    r.raise_for_status()
+
+    emojis = []
+    data = r.json()
+
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
+
+    count = len(data)
+    if count == 0:
+        return emojis
+    pool = ThreadPool(processes=count)
+
+    for d in data:
+
+        src = 'https://image.dbbqb.com/' + d['path']
+        image_name = d['hashId']
+        key_name = cache_path + image_name
+        e = {'url': src, 'path': key_name, 'title': image_name}
+        emojis.append(e)
+
+        if os.path.exists(key_name):
+            continue
+
+        pool.apply_async(func=download, args=(src, key_name, headers))
+    pool.close()
+    pool.join()
+    return emojis
+
+
+def download(url, out_dir, headers):
 
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
@@ -106,7 +152,7 @@ def main(wf):
         pass
 
     def wrapper():
-        return list_emoji(key, page)
+        return list_emoji_dbbqb(key, page)
 
     # 使用缓存，以查询参数（包括查询关键字和页码）作为缓存的 key，缓存 2 小时
     emojis = wf.cached_data(query, wrapper, max_age=7200)
