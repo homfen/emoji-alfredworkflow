@@ -24,6 +24,7 @@ if cache_path[len(cache_path) - 1] != '/':
 
 
 def list_emoji_doutub(query=None, page=1):
+    logger.debug("list_emoji_doutub")
     url = "https://www.doutub.com/search/{}/{}".format(query, page)
 
     headers = {"Referer": "https://www.doutub.com"}
@@ -152,11 +153,13 @@ def main(wf):
         pass
 
     def wrapper():
-        return list_emoji_dbbqb(key, page)
+        # return list_emoji_dbbqb(key, page)
+        return list_emoji_doutub(key, page)
 
     # 使用缓存，以查询参数（包括查询关键字和页码）作为缓存的 key，缓存 2 小时
-    emojis = wf.cached_data(query, wrapper, max_age=7200)
+    # emojis = wf.cached_data(query, wrapper, max_age=7200)
     # emojis = list_emoji(key, page)
+    emojis = list_emoji_doutub(key, page)
 
     if len(emojis) <= 0:
         wf.add_item(title=u'未找到表情包', valid=True, icon=ICON_DEFAULT)
